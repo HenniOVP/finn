@@ -43,18 +43,18 @@ import warnings
 class InferConvInpGenPruned(Transformation):
     """Convert Im2Col layers to ConvolutionInputGenerator layers."""
 
-    def __init__(self, NumColPruned, adjust_following_MVAU=False, SIMD_list=None):
+    def __init__(self, NumColPruned_list, adjust_following_MVAU=False, SIMD_list=None):
         super().__init__()
         self.adjust_following_MVAU = adjust_following_MVAU
         self.SIMD_list = SIMD_list
-        # ToDo NumColPruned should depend on an actual pruning mask
-        self.NumColPruned = NumColPruned
+        # ToDo NumColPruned_list should depend on an actual pruning mask
+        self.NumColPruned_list = NumColPruned_list
 
     def apply(self, model):
 
         graph = model.graph
         node_ind = 0
-        simd_ix = 0
+        layer_ix = 0
         graph_modified = False
         for n in graph.node:
             node_ind += 1
@@ -138,7 +138,9 @@ class InferConvInpGenPruned(Transformation):
                     # make sure that the output is of the right shape
                     old_shape = model.get_tensor_shape(i2c_output)
                     new_shape = list(old_shape)
-                    new_shape[-1] -= int(self.SIMD_list[simd_ix]*self.NumColPruned)
+                    new_shape[-1] -= int(self.SIMD_list[layer_ix] * self.NumColPruned_list[layer_ix])
+                    # Make sure that the nes shape isn't smaller than possible
+                    assert new_shape[-1] >= self.SIMD_list[layer_ix], "Can't prune so many cols that no data is transmitted."
                     model.set_tensor_shape(i2c_output, new_shape)
                     ConvInpGen_node = helper.make_node(
                         "ConvolutionInputGeneratorPruned",
@@ -150,12 +152,12 @@ class InferConvInpGenPruned(Transformation):
                         IFMChannels=ifm_ch,
                         IFMDim=ConvInpGen_idim,
                         OFMDim=ofm_dim,
-                        SIMD=self.SIMD_list[simd_ix],
+                        SIMD=self.SIMD_list[layer_ix],
                         Stride=stride,
                         inputDataType=dt.name,
                         outputDataType=dt.name,
                         depthwise=depthwise,
-                        NumColPruned=self.NumColPruned,
+                        NumColPruned=self.NumColPruned_list[layer_ix],
                     )
                     graph.node.insert(ConvInpGen_node_idx, ConvInpGen_node)
                     # Make sure that the next StreamingFCLayer_Batch node is adjusted
@@ -168,7 +170,7 @@ class InferConvInpGenPruned(Transformation):
                             node_op = getCustomOp(next_node)
                             # adjust matrix width
                             mw = node_op.get_nodeattr("MW")
-                            mw_new = mw - (self.SIMD_list[simd_ix]*self.NumColPruned)
+                            mw_new = mw - (self.SIMD_list[layer_ix]*self.NumColPruned_list[layer_ix])
                             node_op.set_nodeattr("MW", mw_new)
 
                             # Change weight tensor
@@ -176,20 +178,20 @@ class InferConvInpGenPruned(Transformation):
                             # extract and edit old initalizer
                             old_initalizer = model.get_initializer(tensor_to_edit)
                             new_shape = list(old_initalizer.shape)
-                            new_shape[0] -= self.SIMD_list[simd_ix]*self.NumColPruned
+                            new_shape[0] -= self.SIMD_list[layer_ix]*self.NumColPruned_list[layer_ix]
                             new_initalizer = np.empty(new_shape)
                             # copy row wise
                             j = 0
                             for i, row in enumerate(old_initalizer):
                                 # ToDo: this must be done properly, with some sort of pruning mask input
-                                if i < int(self.NumColPruned * self.SIMD_list[simd_ix]):
+                                if i < int(self.NumColPruned_list[layer_ix] * self.SIMD_list[layer_ix]):
                                     continue
                                 new_initalizer[j] = row
                                 j += 1
                             # Use FINN helper function initalizer insertion
                             model.set_initializer(tensor_to_edit, new_initalizer)
 
-                    simd_ix += 1
+                    layer_ix += 1
                 # remove old nodes
                 graph.node.remove(n)
                 graph_modified = True
