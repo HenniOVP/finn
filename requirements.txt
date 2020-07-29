@@ -11,3 +11,6 @@ sphinx
 toposort
 vcdvcd
 wget
+
+# Own additions
+pandas
