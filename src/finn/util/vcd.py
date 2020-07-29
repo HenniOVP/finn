@@ -162,7 +162,7 @@ def _get_stats(x):
     return (x[0], get_stream_if_stats(x[1], x[0]))
 
 
-def get_all_stream_if_stats(vcd_file, stream_ifs=None, sort_by="{'V': 1, 'R': 0}"):
+def get_all_stream_if_stats(vcd_file, stream_ifs=None, sort_by="{'V': 1, 'R': 0}", num_workers=None):
     """Return a list of streaming interface stats, sorted by the percentage
     for the given sort_by key. If stream_ifs is None, all streamin interface
     stats will be returned, otherwise treated as a list of interface names to
@@ -171,7 +171,9 @@ def get_all_stream_if_stats(vcd_file, stream_ifs=None, sort_by="{'V': 1, 'R': 0}
     if stream_ifs is None:
         stream_ifs = list_stream_if(vcd_file)
 
-    with mp.Pool(get_num_default_workers()) as p:
+    if num_workers == None:
+        num_workers = get_num_default_workers()
+    with mp.Pool(num_workers) as p:
         stream_ifs = map(lambda x: (x, vcd_file), stream_ifs)
         all_stats = p.map(_get_stats, stream_ifs)
 
