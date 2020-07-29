@@ -47,7 +47,9 @@ RUN git clone https://github.com/Xilinx/brevitas.git /workspace/brevitas
 # CNPY
 RUN git clone https://github.com/rogersce/cnpy.git /workspace/cnpy
 # FINN hlslib
-RUN git clone https://github.com/Xilinx/finn-hlslib.git /workspace/finn-hlslib
+#RUN git clone https://github.com/Xilinx/finn-hlslib.git /workspace/finn-hlslib
+# Point this to our own FINN hlslib version
+RUN git clone https://github.com/HenniOVP/finn-hlslib.git /workspace/finn-hlslib
 # PyVerilator
 RUN git clone https://github.com/maltanar/pyverilator /workspace/pyverilator
 # PYNQ-HelloWorld
