@@ -32,7 +32,7 @@ import subprocess
 import numpy as np
 
 
-def remote_exec(model, execution_context):
+def remote_exec(model, execution_context, timeout=None):
     """Executes the given model remotely on the pynq board. The metadata properties
     related to the pynq board have to be set. The execution context contains the
     input values."""
@@ -61,7 +61,7 @@ def remote_exec(model, execution_context):
     )
     bash_command = ["/bin/bash", "-c", cmd]
     process_compile = subprocess.Popen(bash_command, stdout=subprocess.PIPE)
-    process_compile.communicate()
+    process_compile.communicate(timeout=timeout)
     cmd = (
         "sshpass -p {} ssh {}@{} -p {} "
         '"cd {}/{}; echo "{}" | '
@@ -78,7 +78,7 @@ def remote_exec(model, execution_context):
     )
     bash_command = ["/bin/bash", "-c", cmd]
     process_compile = subprocess.Popen(bash_command, stdout=subprocess.PIPE)
-    process_compile.communicate()
+    process_compile.communicate(timeout=timeout)
     # remove stale output file from local dir, if any
     try:
         os.remove("{}/output.npy".format(deployment_dir))
@@ -96,6 +96,6 @@ def remote_exec(model, execution_context):
     )
     bash_command = ["/bin/bash", "-c", cmd]
     process_compile = subprocess.Popen(bash_command, stdout=subprocess.PIPE)
-    process_compile.communicate()
+    process_compile.communicate(timeout=timeout)
     outp = np.load("{}/output.npy".format(deployment_dir))
     execution_context[model.graph.output[0].name] = outp

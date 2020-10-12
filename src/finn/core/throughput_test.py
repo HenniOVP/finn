@@ -34,7 +34,7 @@ from finn.util.basic import gen_finn_dt_tensor
 from finn.core.rtlsim_exec import rtlsim_exec
 
 
-def throughput_test(model, batchsize=1000):
+def throughput_test(model, batchsize=1000, timeout=None):
     """Runs the throughput test for the given model remotely on the pynq board.
     The metadata properties related to the pynq board have to be set.
     Returns a dictionary with results of the throughput test. Returns None
@@ -65,7 +65,7 @@ def throughput_test(model, batchsize=1000):
     )
     bash_command = ["/bin/bash", "-c", cmd]
     process_compile = subprocess.Popen(bash_command, stdout=subprocess.PIPE)
-    process_compile.communicate()
+    process_compile.communicate(timeout=timeout)
 
     # remove any pre-existing metrics file
     try:
@@ -84,7 +84,7 @@ def throughput_test(model, batchsize=1000):
     )
     bash_command = ["/bin/bash", "-c", cmd]
     process_compile = subprocess.Popen(bash_command, stdout=subprocess.PIPE)
-    process_compile.communicate()
+    process_compile.communicate(timeout=timeout)
 
     try:
         with open("{}/nw_metrics.txt".format(deployment_dir), "r") as file:

@@ -42,7 +42,7 @@ import finn.analysis.topology as ta
 from finn.util.basic import sanitize_quant_values, get_sanitize_quant_tensors
 
 
-def execute_node(node, context, graph):
+def execute_node(node, context, graph, timeout=None):
     """Executes a single node by using onnxruntime, with custom function or
     if dataflow partition by using remote execution or rtlsim.
 
@@ -51,7 +51,7 @@ def execute_node(node, context, graph):
     if node.op_type == "StreamingDataflowPartition":
         sdp_node = getCustomOp(node)
         model = ModelWrapper(sdp_node.get_nodeattr("model"))
-        ret = execute_onnx(model, context, True)
+        ret = execute_onnx(model, context, True, timeout=timeout)
         context.update(ret)
     else:
         if node.domain == "finn":
@@ -109,7 +109,7 @@ def execute_node(node, context, graph):
 
 
 def execute_onnx(
-    model, input_dict, return_full_exec_context=False, start_node=None, end_node=None
+    model, input_dict, return_full_exec_context=False, start_node=None, end_node=None, timeout=None,
 ):
     """Executes given ONNX ModelWrapper with given named inputs.
 
@@ -182,7 +182,7 @@ def execute_onnx(
                 execution_context = sanitize_quant_values(
                     model, node.input, execution_context
                 )
-            execute_node(node, execution_context, graph)
+            execute_node(node, execution_context, graph, timeout=timeout)
             if get_sanitize_quant_tensors() != 0:
                 # round output values to quantization annotation
                 execution_context = sanitize_quant_values(
@@ -190,7 +190,7 @@ def execute_onnx(
                 )
     elif model_exec_mode == "remote_pynq":
         # use remote exec metadata built into model to execute on a remote PYNQ
-        remote_exec(model, execution_context)
+        remote_exec(model, execution_context, timeout=timeout)
     elif model_exec_mode == "rtlsim":
         # use stitched IP for rtlsim
         rtlsim_exec(model, execution_context)
