@@ -35,6 +35,6 @@ def showSrc(what):
     print("".join(inspect.getsourcelines(what)[0]))
 
 
-def showInNetron(model_filename):
-    netron.start(model_filename, port=8081, host="0.0.0.0")
-    return IFrame(src="http://0.0.0.0:8081/", width="100%", height=400)
+def showInNetron(model_filename, port=8081):
+    netron.start(model_filename, port=port, host="0.0.0.0")
+    return IFrame(src=f"http://0.0.0.0:{port}/", width="100%", height=400)
