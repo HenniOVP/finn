@@ -87,10 +87,11 @@ class MakeZYNQProject(Transformation):
     value.
     """
 
-    def __init__(self, platform, enable_debug=False):
+    def __init__(self, platform, enable_debug=False, num_workers=get_num_default_workers()):
         super().__init__()
         self.platform = platform
         self.enable_debug = 1 if enable_debug else 0
+        self.num_workers = num_workers
 
     def apply(self, model):
 
@@ -221,7 +222,7 @@ class MakeZYNQProject(Transformation):
                     pynq_part_map[self.platform],
                     config,
                     self.enable_debug,
-                    get_num_default_workers(),
+                    self.num_workers,
                 )
             )
 
@@ -265,12 +266,13 @@ class MakeZYNQProject(Transformation):
 class ZynqBuild(Transformation):
     """Best-effort attempt at building the accelerator for Zynq."""
 
-    def __init__(self, platform, period_ns, enable_debug=False):
+    def __init__(self, platform, period_ns, enable_debug=False, num_workers=get_num_default_workers()):
         super().__init__()
         self.fpga_part = pynq_part_map[platform]
         self.period_ns = period_ns
         self.platform = platform
         self.enable_debug = enable_debug
+        self.num_workers = num_workers
 
     def apply(self, model):
         # first infer layouts
@@ -300,17 +302,18 @@ class ZynqBuild(Transformation):
             kernel_model = kernel_model.transform(
                 PrepareIP(self.fpga_part, self.period_ns)
             )
-            kernel_model = kernel_model.transform(HLSSynthIP())
+            kernel_model = kernel_model.transform(HLSSynthIP(num_workers=self.num_workers))
             kernel_model = kernel_model.transform(
                 CreateStitchedIP(
-                    self.fpga_part, self.period_ns, sdp_node.onnx_node.name, True
+                    self.fpga_part, self.period_ns, sdp_node.onnx_node.name, True,
+                    num_workers=self.num_workers
                 )
             )
             kernel_model.set_metadata_prop("platform", "zynq-iodma")
             kernel_model.save(dataflow_model_filename)
         # Assemble design from IPs
         model = model.transform(
-            MakeZYNQProject(self.platform, enable_debug=self.enable_debug)
+            MakeZYNQProject(self.platform, enable_debug=self.enable_debug, num_workers=self.num_workers)
         )
         # set platform attribute for correct remote execution
         model.set_metadata_prop("platform", "zynq-iodma")

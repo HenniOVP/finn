@@ -54,7 +54,7 @@ class CreateStitchedIP(Transformation):
     The packaged block design IP can be found under the ip subdirectory.
     """
 
-    def __init__(self, fpgapart, clk_ns, ip_name="finn_design", vitis=False):
+    def __init__(self, fpgapart, clk_ns, ip_name="finn_design", vitis=False, num_workers=get_num_default_workers()):
         super().__init__()
         self.fpgapart = fpgapart
         self.clk_ns = clk_ns
@@ -83,6 +83,7 @@ class CreateStitchedIP(Transformation):
             "aximm": [],
             "axilite": [],
         }
+        self.num_workers = num_workers
 
     def connect_clk_rst(self, node):
         inst_name = node.name
@@ -304,7 +305,7 @@ class CreateStitchedIP(Transformation):
                 "set_property -name {STEPS.SYNTH_DESIGN.ARGS.MORE OPTIONS} "
                 "-value {-mode out_of_context} -objects [get_runs synth_1]"
             )
-            num_workers = get_num_default_workers()
+            num_workers = self.num_workers
             assert num_workers >= 0, "Number of workers must be nonnegative."
             if num_workers == 0:
                 num_workers = mp.cpu_count()
