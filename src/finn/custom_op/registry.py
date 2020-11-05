@@ -32,7 +32,7 @@ from finn.custom_op.fpgadataflow.convolutioninputgenerator import (
     ConvolutionInputGenerator,
 )
 from finn.custom_op.fpgadataflow.convolutioninputgeneratorpruned import (
-    ConvolutionInputGeneratorPruned,
+    ConvolutionInputGeneratorPruned, ConvolutionInputGeneratorSIMDPruned
 )
 from finn.custom_op.fpgadataflow.downsampler import DownSampler
 from finn.custom_op.fpgadataflow.streamingfclayer_batch import StreamingFCLayer_Batch
@@ -73,6 +73,7 @@ custom_op["StreamingMaxPool_Batch"] = StreamingMaxPool_Batch
 custom_op["StreamingFCLayer_Batch"] = StreamingFCLayer_Batch
 custom_op["ConvolutionInputGenerator"] = ConvolutionInputGenerator
 custom_op["ConvolutionInputGeneratorPruned"] = ConvolutionInputGeneratorPruned
+custom_op["ConvolutionInputGeneratorSIMDPruned"] = ConvolutionInputGeneratorSIMDPruned
 custom_op["TLastMarker"] = TLastMarker
 custom_op["StreamingDataflowPartition"] = StreamingDataflowPartition
 custom_op["MaxPoolNHWC"] = MaxPoolNHWC
