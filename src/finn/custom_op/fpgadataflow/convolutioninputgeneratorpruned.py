@@ -672,12 +672,17 @@ class ConvolutionInputGeneratorPruned(HLSCustomOp):
             "SIMD")
         numCols = int(numCols)
         # ToDo: This is somewhat ugly, make it nicer with actual formating
-        define_string += """\nnamespace PARAM{static bool ColsToPrune["""
+        define_string += """\nnamespace PARAM{static const bool ColsToPrune["""
         define_string += str(numCols) + """]={"""
-        for i in range(self.get_nodeattr("NumColPruned")):
-            define_string += """true,"""
-        for i in range(numCols - self.get_nodeattr("NumColPruned")):
-            define_string += """false,"""
+        # generate a pruning list with random positions
+        prune_list = []
+        for k in range(numCols):
+            if k < self.get_nodeattr("NumColPruned"):
+                prune_list.append("true,")
+            else:
+                prune_list.append("false,")
+        np.random.shuffle(prune_list)
+        define_string += "".join(prune_list)
         define_string += """};}"""
 
         self.code_gen_dict["$DEFINES$"] = [
