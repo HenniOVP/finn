@@ -143,13 +143,10 @@ class InferConvInpGenSIMDPruned(Transformation):
                 else:
                     # Calculate SIMD_in and new SIMD_out
                     SIMD_in = self.SIMD_list[layer_ix]
-                    print(f"ifm_ch={ifm_ch}")
-                    print(f"SIMD_in={SIMD_in}")
                     # The output must fulfill ifm_ch % simd == 0
                     SIMD_out = math.ceil(SIMD_in * (1-self.pruning_ratio))
                     if SIMD_out <= 0:
                         SIMD_out = 1
-                    print(f"SIMD_out={SIMD_out}")
                     # If the SIND_out_candidate is not compatible, make it bigger until it fits
                     while not (ifm_ch % SIMD_out == 0):
                         SIMD_out += 1
@@ -157,16 +154,13 @@ class InferConvInpGenSIMDPruned(Transformation):
                         if SIMD_out > SIMD_in:
                             SIMD_out = SIMD_in
                             break
-                    print(f"SIMD_out={SIMD_out}")
 
                     # create equivalent ConvolutionInputGenerator node
                     # make sure that the output is of the right shape
                     old_shape = model.get_tensor_shape(i2c_output)
                     new_shape = list(old_shape)
-                    print(f"new_shape={new_shape}")
                     # Substract: Number of SIMD_blocks * Number of elements pruned in each block
                     new_shape[-1] -= int(new_shape[-1]/SIMD_in * (SIMD_in - SIMD_out))
-                    print(f"new_shape={new_shape}")
                     # Make sure that the nes shape isn't smaller than possible
                     assert new_shape[-1] >= SIMD_out, "Can't prune so many cols that no data is transmitted."
                     model.set_tensor_shape(i2c_output, new_shape)
