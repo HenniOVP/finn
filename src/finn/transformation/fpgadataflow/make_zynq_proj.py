@@ -266,13 +266,14 @@ class MakeZYNQProject(Transformation):
 class ZynqBuild(Transformation):
     """Best-effort attempt at building the accelerator for Zynq."""
 
-    def __init__(self, platform, period_ns, enable_debug=False, num_workers=get_num_default_workers()):
+    def __init__(self, platform, period_ns, enable_debug=False, num_workers=get_num_default_workers(), auto_set_FIFO_depth=False):
         super().__init__()
         self.fpga_part = pynq_part_map[platform]
         self.period_ns = period_ns
         self.platform = platform
         self.enable_debug = enable_debug
         self.num_workers = num_workers
+        self.auto_set_FIFO_depth = auto_set_FIFO_depth
 
     def apply(self, model):
         # first infer layouts
