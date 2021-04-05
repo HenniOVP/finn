@@ -31,8 +31,8 @@ import os
 import numpy as np
 
 from finn.core.datatype import DataType
-from finn.custom_op.fpgadataflow import HLSCustomOp
-from finn.custom_op.im2col import compute_conv_output_dim
+from finn.custom_op.fpgadataflow.hlscustomop import HLSCustomOp
+from finn.custom_op.general.im2col import compute_conv_output_dim
 from onnx import TensorProto, helper
 from finn.util.data_packing import npy_to_rtlsim_input, rtlsim_output_to_npy
 
@@ -80,7 +80,8 @@ class ConvolutionInputGeneratorSIMDPruned(HLSCustomOp):
         ifm_dim = self.get_nodeattr("IFMDim")
         ifm_ch = self.get_nodeattr("IFMChannels")
         simd = self.get_nodeattr("SIMD_in")
-        assert ifm_ch % simd == 0, "SIMD must divide IFMChannels"
+        if not (ifm_ch % simd == 0):
+            raise ValueError(f"SIMD ({simd}) must divide IFMChannels ({ifm_ch})")
         wf = int(ifm_ch / simd)
         folded_ishape = (1, ifm_dim, ifm_dim, wf, simd)
         return folded_ishape
@@ -109,8 +110,10 @@ class ConvolutionInputGeneratorSIMDPruned(HLSCustomOp):
         simd_out = self.get_nodeattr("SIMD_out")
         pad = 0
         ofm_dim = compute_conv_output_dim(ifm_dim, k, stride, pad)
-        assert ifm_ch % simd_in == 0, "SIMD_in must divide IFMChannels"
-        assert ifm_ch % simd_out == 0, "SIMD_out must divide IFMChannels"
+        if not (ifm_ch % simd_in == 0):
+            raise ValueError(f"SIMD_in ({simd_in}) must divide IFMChannels ({ifm_ch})")
+        if not (ifm_ch % simd_out == 0):
+            raise ValueError(f"SIMD_out ({simd_out}) must divide IFMChannels ({ifm_ch})")
         assert k % stride == 0, "stride must divide kernel size k"
         # Since we just reduce the SIMD parameter, but not the number of SIMD elements passed
         # This calculation can remain as if it would use simd_in at the output

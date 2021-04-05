@@ -116,12 +116,13 @@ class InferConvInpGenSIMDPruned(Transformation):
                         "FMPadding_Batch",
                         [i2c_input],
                         [padding_out],
-                        domain="finn",
+                        domain="finn.custom_op.fpgadataflow",
                         backend="fpgadataflow",
                         ImgDim=ifm_dim,
                         Padding=2 * pad,
                         NumChannels=ifm_ch,
                         inputDataType=dt.name,
+                        SIMD=ifm_ch,
                     )
                     graph.node.insert(node_ind, padding_node)
 
@@ -131,7 +132,7 @@ class InferConvInpGenSIMDPruned(Transformation):
                         "DownSampler",
                         [ConvInpGen_input],
                         [i2c_output],
-                        domain="finn",
+                        domain="finn.custom_op.fpgadataflow",
                         backend="fpgadataflow",
                         ImgDim=ConvInpGen_idim,
                         NumChannels=ifm_ch,
@@ -170,7 +171,7 @@ class InferConvInpGenSIMDPruned(Transformation):
                         "ConvolutionInputGeneratorSIMDPruned",
                         [ConvInpGen_input],
                         [i2c_output],
-                        domain="finn",
+                        domain="finn.custom_op.fpgadataflow",
                         backend="fpgadataflow",
                         ConvKernelDim=k,
                         IFMChannels=ifm_ch,
@@ -220,8 +221,8 @@ class InferConvInpGenSIMDPruned(Transformation):
                             node_op.set_nodeattr("SIMD", SIMD_out)
                             # Handle 1 as a special case, to signify that we don't want this edited
                             # This should probably be codified in it's own parameter
-                            if SIMD_out == 1:
-                                node_op.set_nodeattr("SIMD", -1)
+                            #if SIMD_out == 1:
+                            #    node_op.set_nodeattr("SIMD", -1)
 
                     layer_ix += 1
                 # remove old nodes
@@ -307,12 +308,13 @@ class InferConvInpGenPruned(Transformation):
                         "FMPadding_Batch",
                         [i2c_input],
                         [padding_out],
-                        domain="finn",
+                        domain="finn.custom_op.fpgadataflow",
                         backend="fpgadataflow",
                         ImgDim=ifm_dim,
                         Padding=2 * pad,
                         NumChannels=ifm_ch,
                         inputDataType=dt.name,
+                        SIMD=ifm_ch,
                     )
                     graph.node.insert(node_ind, padding_node)
 
@@ -322,7 +324,7 @@ class InferConvInpGenPruned(Transformation):
                         "DownSampler",
                         [ConvInpGen_input],
                         [i2c_output],
-                        domain="finn",
+                        domain="finn.custom_op.fpgadataflow",
                         backend="fpgadataflow",
                         ImgDim=ConvInpGen_idim,
                         NumChannels=ifm_ch,
@@ -337,7 +339,8 @@ class InferConvInpGenPruned(Transformation):
                     old_shape = model.get_tensor_shape(i2c_output)
                     new_shape = list(old_shape)
                     num_channels = new_shape[-1]
-                    assert (num_channels % self.SIMD_list[layer_ix]) == 0, "SIMD must divide number of channels"
+                    if not ((num_channels % self.SIMD_list[layer_ix]) == 0):
+                        raise ValueError(f"SIMD ({self.SIMD_list[layer_ix]}) must divide IFMChannels ({num_channels})")
                     prunable_cols = num_channels / self.SIMD_list[layer_ix]
                     NumColPruned =  int(round(prunable_cols * self.pruning_ratio))
                     new_shape[-1] -= int(self.SIMD_list[layer_ix] * NumColPruned)
@@ -348,7 +351,7 @@ class InferConvInpGenPruned(Transformation):
                         "ConvolutionInputGeneratorPruned",
                         [ConvInpGen_input],
                         [i2c_output],
-                        domain="finn",
+                        domain="finn.custom_op.fpgadataflow",
                         backend="fpgadataflow",
                         ConvKernelDim=k,
                         IFMChannels=ifm_ch,

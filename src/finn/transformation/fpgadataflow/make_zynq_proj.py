@@ -50,6 +50,7 @@ from finn.transformation.general import GiveReadableTensorNames, GiveUniqueNodeN
 from finn.transformation.infer_data_layouts import InferDataLayouts
 from shutil import copy
 from finn.transformation.fpgadataflow.make_pynq_driver import MakePYNQDriver
+from finn.transformation.fpgadataflow.set_fifo_depths import InsertAndSetFIFODepths
 
 from . import templates
 
@@ -276,13 +277,12 @@ class MakeZYNQProject(Transformation):
 class ZynqBuild(Transformation):
     """Best-effort attempt at building the accelerator for Zynq."""
 
-    def __init__(self, platform, period_ns, enable_debug=False, num_workers=get_num_default_workers(), auto_set_FIFO_depth=False):
+    def __init__(self, platform, period_ns, enable_debug=False, auto_set_FIFO_depth=False):
         super().__init__()
         self.fpga_part = pynq_part_map[platform]
         self.period_ns = period_ns
         self.platform = platform
         self.enable_debug = enable_debug
-        self.num_workers = num_workers
         self.auto_set_FIFO_depth = auto_set_FIFO_depth
 
     def apply(self, model):
@@ -296,6 +296,9 @@ class ZynqBuild(Transformation):
             Floorplan(),
             CreateDataflowPartition(),
         ]
+        if self.auto_set_FIFO_depth:
+            prep_transforms.insert(1, InsertAndSetFIFODepths(self.fpga_part, self.period_ns))
+
         for trn in prep_transforms:
             model = model.transform(trn)
             model = model.transform(GiveUniqueNodeNames())
@@ -307,24 +310,24 @@ class ZynqBuild(Transformation):
             sdp_node = getCustomOp(sdp_node)
             dataflow_model_filename = sdp_node.get_nodeattr("model")
             kernel_model = ModelWrapper(dataflow_model_filename)
-            kernel_model = kernel_model.transform(InsertFIFO())
+            if not self.auto_set_FIFO_depth:
+                kernel_model = kernel_model.transform(InsertFIFO())
             kernel_model = kernel_model.transform(GiveUniqueNodeNames(prefix))
             kernel_model.save(dataflow_model_filename)
             kernel_model = kernel_model.transform(
                 PrepareIP(self.fpga_part, self.period_ns)
             )
-            kernel_model = kernel_model.transform(HLSSynthIP(num_workers=self.num_workers))
+            kernel_model = kernel_model.transform(HLSSynthIP())
             kernel_model = kernel_model.transform(
                 CreateStitchedIP(
                     self.fpga_part, self.period_ns, sdp_node.onnx_node.name, True,
-                    num_workers=self.num_workers
                 )
             )
             kernel_model.set_metadata_prop("platform", "zynq-iodma")
             kernel_model.save(dataflow_model_filename)
         # Assemble design from IPs
         model = model.transform(
-            MakeZYNQProject(self.platform, enable_debug=self.enable_debug, num_workers=self.num_workers)
+            MakeZYNQProject(self.platform, enable_debug=self.enable_debug)
         )
         # set platform attribute for correct remote execution
         model.set_metadata_prop("platform", "zynq-iodma")
