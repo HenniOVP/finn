@@ -44,13 +44,14 @@ class DeployToPYNQ(Transformation):
     IP address of board, username and password for board and target directory where
     the files are stored on the board"""
 
-    def __init__(self, ip, port, username, password, target_dir):
+    def __init__(self, ip, port, username, password, target_dir, timeout=None):
         super().__init__()
         self.ip = ip
         self.port = port
         self.username = username
         self.password = password
         self.target_dir = target_dir
+        self.timeout = timeout
 
     def apply(self, model):
         # set metadata properties accordingly to user input specifications
@@ -110,13 +111,13 @@ class DeployToPYNQ(Transformation):
         )
         bash_command = ["/bin/bash", "-c", cmd]
         process_compile = subprocess.Popen(bash_command, stdout=subprocess.PIPE)
-        process_compile.communicate()
+        process_compile.communicate(timeout=self.timeout)
         # copy directory to PYNQ board using scp and sshpass
         cmd = prefix + "scp -P{} -r {} {}@{}:{}".format(
             self.port, deployment_dir, self.username, self.ip, self.target_dir,
         )
         bash_command = ["/bin/bash", "-c", cmd]
         process_compile = subprocess.Popen(bash_command, stdout=subprocess.PIPE)
-        process_compile.communicate()
+        process_compile.communicate(timeout=self.timeout)
 
         return (model, False)
